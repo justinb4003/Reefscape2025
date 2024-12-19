@@ -50,17 +50,9 @@ class MyRobot(magicbot.MagicRobot):
         self.field.getObject("Intended start pos").setPoses([])
 
     def handle_drivetrain(self) -> None:
-        # foreshadowing function in this commit!
-        pass
-
-    def teleopPeriodic(self) -> None:
-        # Set max speed
-        max_speed = self.max_speed
-        max_spin_rate = self.max_spin_rate
-        if self.gamepad.getRightBumper():
-            max_speed = self.lower_max_speed
-            max_spin_rate = self.lower_max_spin_rate
-
+        # First handle any situation where the drive wants the robot
+        # to snap onto a vision target of some kind, but only if the
+        # component knows it has something alraedy in sight.
         if self.gamepad.getAButton() and self.note_tracker.note_detected:
             # Note Tracking
             x, y, z = self.note_tracker.get_desired_xyz()
@@ -70,7 +62,13 @@ class MyRobot(magicbot.MagicRobot):
             x, y, z = self.speaker_tracker.get_desired_xyz()
             self.chassis.drive_local(x, y, z)
         else:
-            # Driving
+            # Driving is now manual, by the driver from the controller
+            # Set max speed
+            max_speed = self.max_speed
+            max_spin_rate = self.max_spin_rate
+            if self.gamepad.getRightBumper():
+                max_speed = self.lower_max_speed
+                max_spin_rate = self.lower_max_spin_rate
             drive_x = -rescale_js(self.gamepad.getLeftY(), 0.05, 2.5) * max_speed
             drive_y = -rescale_js(self.gamepad.getLeftX(), 0.05, 2.5) * max_speed
             drive_z = (
@@ -89,6 +87,9 @@ class MyRobot(magicbot.MagicRobot):
             # Give rotational access to the driver
             if drive_z != 0:
                 self.chassis.stop_snapping()
+
+    def teleopPeriodic(self) -> None:
+        self.handle_drivetrain()
 
     def testInit(self) -> None:
         pass
