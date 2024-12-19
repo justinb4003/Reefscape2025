@@ -2,10 +2,10 @@ import math
 from logging import Logger
 
 import magicbot
-import navx
 import ntcore
 import wpilib
 from magicbot import feedback
+from note_tracker import NoteTracker
 from phoenix6.configs import (
     ClosedLoopGeneralConfigs,
     FeedbackConfigs,
@@ -195,11 +195,12 @@ class SwerveModule:
         return SwerveModuleState(self.get_speed(), self.get_rotation())
 
 
-class ChassisComponent:
-    # metres between centre of left and right wheels
-    TRACK_WIDTH = 0.467
-    # metres between centre of front and back wheels
-    WHEEL_BASE = 0.467
+class DrivetrainComponent:
+    note_tracker: NoteTracker
+    # meters between center of left and right wheels
+    TRACK_WIDTH = 0.540
+    # meters between center of front and back wheels
+    WHEEL_BASE = 0.540
 
     # size including bumpers
     LENGTH = 0.600 + 2 * 0.09
@@ -226,7 +227,8 @@ class ChassisComponent:
     # TODO: Read from positions.py once autonomous is finished
 
     def __init__(self) -> None:
-        self.imu = navx.AHRS.create_spi()
+        # TODO: Replace with Pigeon
+        # self.imu = something
         self.heading_controller = ProfiledPIDControllerRadians(
             3, 0, 0, TrapezoidProfileRadians.Constraints(100, 100)
         )
@@ -241,33 +243,33 @@ class ChassisComponent:
             SwerveModule(
                 self.WHEEL_BASE / 2,
                 self.TRACK_WIDTH / 2,
-                TalonId.DRIVE_1,
-                TalonId.STEER_1,
-                CancoderId.SWERVE_1,
+                TalonId.DRIVE_FL,
+                TalonId.TURN_FL,
+                CancoderId.SWERVE_FL,
             ),
             # Back Left
             SwerveModule(
                 -self.WHEEL_BASE / 2,
                 self.TRACK_WIDTH / 2,
-                TalonId.DRIVE_2,
-                TalonId.STEER_2,
-                CancoderId.SWERVE_2,
+                TalonId.DRIVE_BL,
+                TalonId.TURN_BL,
+                CancoderId.SWERVE_BL,
             ),
             # Back Right
             SwerveModule(
                 -self.WHEEL_BASE / 2,
                 -self.TRACK_WIDTH / 2,
-                TalonId.DRIVE_3,
-                TalonId.STEER_3,
-                CancoderId.SWERVE_3,
+                TalonId.DRIVE_BR,
+                TalonId.TURN_BR,
+                CancoderId.SWERVE_BR,
             ),
             # Front Right
             SwerveModule(
                 self.WHEEL_BASE / 2,
                 -self.TRACK_WIDTH / 2,
-                TalonId.DRIVE_4,
-                TalonId.STEER_4,
-                CancoderId.SWERVE_4,
+                TalonId.DRIVE_FR,
+                TalonId.TURN_FR,
+                CancoderId.SWERVE_FR,
             ),
         )
 
@@ -278,10 +280,11 @@ class ChassisComponent:
             self.modules[3].translation,
         )
         self.sync_all()
-        self.imu.zeroYaw()
-        self.imu.resetDisplacement()
+        # TODO: Replace with pigeon
+        # self.imu.zeroYaw()
+        # self.imu.resetDisplacement()
 
-        nt = ntcore.NetworkTableInstance.getDefault().getTable("/components/chassis")
+        nt = ntcore.NetworkTableInstance.getDefault().getTable("/components/drivetrain")
         module_states_table = nt.getSubTable("module_states")
         self.setpoints_publisher = module_states_table.getStructArrayTopic(
             "setpoints", SwerveModuleState
@@ -297,7 +300,9 @@ class ChassisComponent:
 
     @feedback
     def imu_rotation(self) -> float:
-        return self.imu.getAngle()
+        # TODO: Replace with Pigeon
+        # return self.imu.getAngle()
+        return 0
 
     def get_module_states(
         self,
@@ -317,7 +322,8 @@ class ChassisComponent:
 
         self.estimator = SwerveDrive4PoseEstimator(
             self.kinematics,
-            self.imu.getRotation2d(),
+            # self.imu.getRotation2d(),  # TODO: Replace with Pigeon
+            0,
             self.get_module_positions(),
             initial_pose,
             stateStdDevs=(0.05, 0.05, 0.01),
@@ -332,10 +338,6 @@ class ChassisComponent:
         self.chassis_speeds = ChassisSpeeds.fromFieldRelativeSpeeds(
             vx, vy, omega, current_heading
         )
-
-    def to_field_oriented(self, chassis_speed: ChassisSpeeds) -> ChassisSpeeds:
-        current_heading = self.get_rotation()
-        return ChassisSpeeds.fromRobotRelativeSpeeds(chassis_speed, current_heading)
 
     def drive_local(self, vx: float, vy: float, omega: float) -> None:
         """Robot oriented drive commands"""
@@ -404,10 +406,14 @@ class ChassisComponent:
 
     @magicbot.feedback
     def get_imu_speed(self) -> float:
-        return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
+        # TODO: Replace with Pigeon
+        # return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
+        return 0
 
     def get_rotational_velocity(self) -> float:
-        return math.radians(-self.imu.getRate())
+        # TODO: Replace with Pigeon
+        # return math.radians(-self.imu.getRate())
+        return 0
 
     def lock_swerve(self) -> None:
         self.swerve_lock = True
@@ -427,7 +433,8 @@ class ChassisComponent:
                 self.set_pose(TeamPoses.BLUE_TEST_POSE)
 
     def update_odometry(self) -> None:
-        self.estimator.update(self.imu.getRotation2d(), self.get_module_positions())
+        # TODO: Replace with Pigeon
+        # self.estimator.update(self.imu.getRotation2d(), self.get_module_positions())
         self.field_obj.setPose(self.get_pose())
         if self.send_modules:
             self.setpoints_publisher.set([module.state for module in self.modules])
@@ -438,9 +445,12 @@ class ChassisComponent:
             m.sync_steer_encoder()
 
     def set_pose(self, pose: Pose2d) -> None:
+        # TODO: Replace with Pigeon
+        """
         self.estimator.resetPosition(
             self.imu.getRotation2d(), self.get_module_positions(), pose
         )
+        """
         self.field.setRobotPose(pose)
         self.field_obj.setPose(pose)
 

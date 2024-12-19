@@ -13,7 +13,7 @@ from wpimath.kinematics import SwerveDrive4Kinematics
 from wpimath.system.plant import DCMotor, LinearSystemId
 from wpimath.units import kilogram_square_meters
 
-from components.chassis import SwerveModule
+from components.drivetrain import SwerveModule
 from utilities import game
 
 if typing.TYPE_CHECKING:

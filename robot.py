@@ -6,7 +6,9 @@ import wpilib.event
 from magicbot import tunable
 from wpimath.geometry import Rotation3d, Translation3d
 
-from components.chassis import ChassisComponent
+from components.drivetrain import DrivetrainComponent
+from components.note_tracker import NoteTracker
+from components.speaker_tracker import SpeakerTracker
 from components.vision import VisualLocalizer
 from utilities.game import is_red
 from utilities.scalers import rescale_js
@@ -16,14 +18,16 @@ class MyRobot(magicbot.MagicRobot):
     # Controllers
 
     # Components
-    chassis: ChassisComponent
+    chassis: DrivetrainComponent
+    vision: VisualLocalizer
+    note_tracker: NoteTracker
+    speaker_tracker: SpeakerTracker
 
     max_speed = magicbot.tunable(5)  # m/s
     lower_max_speed = magicbot.tunable(2)  # m/s
     max_spin_rate = magicbot.tunable(4)  # m/s
     lower_max_spin_rate = magicbot.tunable(2)  # m/s
     inclination_angle = tunable(0.0)
-    vision: VisualLocalizer
 
     START_POS_TOLERANCE = 1
 
@@ -45,6 +49,10 @@ class MyRobot(magicbot.MagicRobot):
     def teleopInit(self) -> None:
         self.field.getObject("Intended start pos").setPoses([])
 
+    def handle_drivetrain(self) -> None:
+        # foreshadowing function in this commit!
+        pass
+
     def teleopPeriodic(self) -> None:
         # Set max speed
         max_speed = self.max_speed
@@ -53,40 +61,34 @@ class MyRobot(magicbot.MagicRobot):
             max_speed = self.lower_max_speed
             max_spin_rate = self.lower_max_spin_rate
 
-        # Driving
-        drive_x = -rescale_js(self.gamepad.getLeftY(), 0.05, 2.5) * max_speed
-        drive_y = -rescale_js(self.gamepad.getLeftX(), 0.05, 2.5) * max_speed
-        drive_z = (
-            -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2) * max_spin_rate
-        )
-        local_driving = self.gamepad.getXButton()
-
-        if local_driving:
-            self.chassis.drive_local(drive_x, drive_y, drive_z)
+        if self.gamepad.getAButton() and self.note_tracker.note_detected:
+            # Note Tracking
+            x, y, z = self.note_tracker.get_desired_xyz()
+            self.chassis.drive_local(x, y, z)
+        elif self.gamepad.getBButton() and self.speaker_tracker.speaker_detected:
+            # Speaker Tracking
+            x, y, z = self.speaker_tracker.get_desired_xyz()
+            self.chassis.drive_local(x, y, z)
         else:
-            if is_red():
-                drive_x = -drive_x
-                drive_y = -drive_y
-            self.chassis.drive_field(drive_x, drive_y, drive_z)
+            # Driving
+            drive_x = -rescale_js(self.gamepad.getLeftY(), 0.05, 2.5) * max_speed
+            drive_y = -rescale_js(self.gamepad.getLeftX(), 0.05, 2.5) * max_speed
+            drive_z = (
+                -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2)
+                * max_spin_rate
+            )
+            local_driving = self.gamepad.getXButton()
 
-        # Give rotational access to the driver
-        if drive_z != 0:
-            self.chassis.stop_snapping()
-
-        dpad = self.gamepad.getPOV()
-        # dpad upwards
-        # if dpad in (0, 45, 315):
-        # self.climber.deploy()
-        # elif dpad in (135, 180, 235):
-        # self.climber.retract()
-
-        # Set current robot direction to forward
-        if dpad in (135, 180, 235):
-            self.chassis.reset_yaw()
-
-        # Reset Odometry
-        if dpad in (0, 45, 315):
-            self.chassis.reset_odometry()
+            if local_driving:
+                self.chassis.drive_local(drive_x, drive_y, drive_z)
+            else:
+                if is_red():
+                    drive_x = -drive_x
+                    drive_y = -drive_y
+                self.chassis.drive_field(drive_x, drive_y, drive_z)
+            # Give rotational access to the driver
+            if drive_z != 0:
+                self.chassis.stop_snapping()
 
     def testInit(self) -> None:
         pass
