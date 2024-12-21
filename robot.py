@@ -50,9 +50,9 @@ class MyRobot(magicbot.MagicRobot):
         self.field.getObject("Intended start pos").setPoses([])
 
     def handle_drivetrain(self) -> None:
-        # First handle any situation where the drive wants the robot
+        # First handle any situation where the driver wants the robot
         # to snap onto a vision target of some kind, but only if the
-        # component knows it has something alraedy in sight.
+        # component knows it has something already in sight.
         if self.gamepad.getAButton() and self.note_tracker.note_detected:
             # Note Tracking
             x, y, z = self.note_tracker.get_desired_xyz()
