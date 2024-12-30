@@ -54,7 +54,7 @@ select = [
     # perflint
     "PERF",
 ]
-ignore = ["E501"]
+ignore = ["E501", "I001"]
 
 [tool.uv]
 dev-dependencies = [
