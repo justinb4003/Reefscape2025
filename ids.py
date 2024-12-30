@@ -32,6 +32,13 @@ class CancoderId(enum.IntEnum):
 
 
 @enum.unique
+class CanId(enum.IntEnum):
+    """CAN IDs for miscellaneous devices."""
+
+    PIGEON = 63
+
+
+@enum.unique
 class SparkId(enum.IntEnum):
     """CAN ID for REV SPARK motor controllers (Spark Max, Spark Flex)."""
 

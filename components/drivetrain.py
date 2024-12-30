@@ -5,7 +5,6 @@ import magicbot
 import ntcore
 import wpilib
 from magicbot import feedback
-from note_tracker import NoteTracker
 from phoenix6.configs import (
     ClosedLoopGeneralConfigs,
     FeedbackConfigs,
@@ -34,6 +33,9 @@ from utilities.ctre import FALCON_FREE_RPS
 from utilities.functions import rate_limit_module
 from utilities.game import is_red
 from utilities.position import TeamPoses
+
+from .gyro import Gyro
+from .note_tracker import NoteTracker
 
 
 class SwerveModule:
@@ -197,6 +199,7 @@ class SwerveModule:
 
 class DrivetrainComponent:
     note_tracker: NoteTracker
+    gyro: Gyro
     # meters between center of left and right wheels
     TRACK_WIDTH = 0.540
     # meters between center of front and back wheels
@@ -316,14 +319,16 @@ class DrivetrainComponent:
             self.modules[3].get(),
         )
 
+    def get_heading(self) -> Rotation2d:
+        return self.gyro.get_Rotation2d()
+
     def setup(self) -> None:
         # TODO update with new game info
         initial_pose = TeamPoses.RED_TEST_POSE if is_red() else TeamPoses.BLUE_TEST_POSE
 
         self.estimator = SwerveDrive4PoseEstimator(
             self.kinematics,
-            # self.imu.getRotation2d(),  # TODO: Replace with Pigeon
-            0,
+            self.get_heading(),  # self.imu.getRotation2d(),  # TODO: Replace with Pigeon
             self.get_module_positions(),
             initial_pose,
             stateStdDevs=(0.05, 0.05, 0.01),

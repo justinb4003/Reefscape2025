@@ -7,6 +7,7 @@ from magicbot import tunable
 from wpimath.geometry import Rotation3d, Translation3d
 
 from components.drivetrain import DrivetrainComponent
+from components.gyro import Gyro
 from components.note_tracker import NoteTracker
 from components.speaker_tracker import SpeakerTracker
 from components.vision import VisualLocalizer
@@ -21,6 +22,7 @@ class MyRobot(magicbot.MagicRobot):
     chassis: DrivetrainComponent
     vision: VisualLocalizer
     note_tracker: NoteTracker
+    gyro: Gyro
     speaker_tracker: SpeakerTracker
 
     max_speed = magicbot.tunable(5)  # m/s
