@@ -97,7 +97,7 @@ class PhysicsEngine:
         ]
 
         # Replace NavX with Pigeon 2
-        self.current_yaw = 0
+        self.current_yaw = 0.0
         self.gyro = robot.gyro.pigeon.sim_state  # Access the Pigeon 2's sim state
         self.gyro.set_supply_voltage(12.0)  # Set the supply voltage for simulation
 

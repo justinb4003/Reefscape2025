@@ -24,14 +24,14 @@ class SpeakerTracker:
                 bbox = t.detectedCorners
                 ps(f"/photon/objs/{idx}", f"{class_id}, {conf}, {bbox}")
                 if conf > 0.5:
-                    offset = 10  # TODO: Calcualte something
+                    offset = 10.0  # TODO: Calcualte something
                     self.desired_heading = curr_heading + offset
                     self.desired_x = (
-                        2  # TODO: calculate based off bbox size and PID loop
+                        2.0  # TODO: calculate based off bbox size and PID loop
                     )
-                    self.desired_y = 1  # TODO: Calculate based off heading
+                    self.desired_y = 1.0  # TODO: Calculate based off heading
                     self.note_detected = True
                     break
 
-    def get_desired_xyz(self) -> tuple[float, float, float]:
+    def get_desired_xyz(self) -> tuple[float | None, float | None, float | None]:
         return self.desired_x, self.desired_y, self.desired_heading

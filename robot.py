@@ -58,11 +58,13 @@ class MyRobot(magicbot.MagicRobot):
         if self.gamepad.getAButton() and self.note_tracker.note_detected:
             # Note Tracking
             x, y, z = self.note_tracker.get_desired_xyz()
-            self.chassis.drive_local(x, y, z)
+            if x is not None and y is not None and z is not None:
+                self.chassis.drive_local(x, y, z)
         elif self.gamepad.getBButton() and self.speaker_tracker.speaker_detected:
             # Speaker Tracking
             x, y, z = self.speaker_tracker.get_desired_xyz()
-            self.chassis.drive_local(x, y, z)
+            if x is not None and y is not None and z is not None:
+                self.chassis.drive_local(x, y, z)
         else:
             # Driving is now manual, by the driver from the controller
             # Set max speed
