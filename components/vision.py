@@ -8,7 +8,13 @@ from magicbot import feedback, tunable
 from photonlibpy import PhotonCamera
 from photonlibpy.targeting import PhotonTrackedTarget
 from wpimath import objectToRobotPose
-from wpimath.geometry import Pose2d, Pose3d, Rotation3d, Transform3d, Translation3d
+from wpimath.geometry import (
+    Pose2d,
+    Pose3d,
+    Rotation3d,
+    Transform3d,
+    Translation3d,
+)
 
 from components.drivetrain import DrivetrainComponent
 from utilities.game import apriltag_layout
@@ -71,6 +77,7 @@ class VisualLocalizer:
         return self.has_multitag
 
     def execute(self) -> None:
+        return
         results = self.camera.getLatestResult()
         # if results didn't see any targets
         if not results.getTargets():
@@ -121,7 +128,9 @@ class VisualLocalizer:
                 if target.getPoseAmbiguity() > 0.25:
                     continue
 
-                poses = estimate_poses_from_apriltag(self.robot_to_camera, target)
+                poses = estimate_poses_from_apriltag(
+                    self.robot_to_camera, target
+                )
                 if poses is None:
                     # tag doesn't exist
                     continue
@@ -175,7 +184,9 @@ def get_target_skew(target: PhotonTrackedTarget) -> float:
     return math.atan2(tag_to_cam.y, tag_to_cam.x)
 
 
-def choose_pose(best_pose: Pose2d, alternate_pose: Pose2d, cur_robot: Pose2d) -> Pose2d:
+def choose_pose(
+    best_pose: Pose2d, alternate_pose: Pose2d, cur_robot: Pose2d
+) -> Pose2d:
     """Picks either the best or alternate pose estimate"""
     best_dist = best_pose.translation().distance(cur_robot.translation())
     alternate_dist = (

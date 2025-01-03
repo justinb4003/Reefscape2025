@@ -46,12 +46,14 @@ class SwerveModule:
     DRIVE_MOTOR_REV_TO_METRES = WHEEL_CIRCUMFERENCE * DRIVE_GEAR_RATIO
     STEER_MOTOR_REV_TO_RAD = math.tau * STEER_GEAR_RATIO
 
-    # limit the acceleration of the commanded speeds of the robot to what is actually
-    # achiveable without the wheels slipping. This is done to improve odometry
+    # limit the acceleration of the commanded speeds of the robot to what is
+    # actually achiveable without the wheels slipping. This is done to improve
+    # odometry
     accel_limit = 15  # m/s^2
 
     def __init__(
         self,
+        name: str,
         x: float,
         y: float,
         drive_id: int,
@@ -64,15 +66,15 @@ class SwerveModule:
         x, y: where the module is relative to the center of the robot
         *_id: can ids of steer and drive motors and absolute encoder
         """
+        self.name = name
         self.translation = Translation2d(x, y)
         self.state = SwerveModuleState(0, Rotation2d(0))
         self.do_smooth = True
 
         # Create Motor and encoder objects
-        self.steer = TalonFX(steer_id)
-        self.drive = TalonFX(drive_id)
-        self.drive_id = drive_id
-        self.encoder = CANcoder(encoder_id)
+        self.steer = TalonFX(steer_id, "canivore")
+        self.drive = TalonFX(drive_id, "canivore")
+        self.encoder = CANcoder(encoder_id, "canivore")
 
         # Reduce CAN status frame rates before configuring
         self.steer.get_fault_field().set_update_frequency(
@@ -90,12 +92,14 @@ class SwerveModule:
         # The SDS Mk4i rotation has one pair of gears.
         steer_motor_config.inverted = InvertedValue.CLOCKWISE_POSITIVE
 
-        steer_gear_ratio_config = FeedbackConfigs().with_sensor_to_mechanism_ratio(
-            1 / self.STEER_GEAR_RATIO
+        steer_gear_ratio_config = (
+            FeedbackConfigs().with_sensor_to_mechanism_ratio(
+                1 / self.STEER_GEAR_RATIO
+            )
         )
 
         # configuration for motor pid
-        steer_pid = Slot0Configs().with_k_p(2.4206).with_k_i(0).with_k_d(0.060654)
+        steer_pid = Slot0Configs().with_k_p(2.5).with_k_i(0.0).with_k_d(0.0)
         steer_closed_loop_config = ClosedLoopGeneralConfigs()
         steer_closed_loop_config.continuous_wrap = True
 
@@ -115,13 +119,15 @@ class SwerveModule:
             else InvertedValue.COUNTER_CLOCKWISE_POSITIVE
         )
 
-        drive_gear_ratio_config = FeedbackConfigs().with_sensor_to_mechanism_ratio(
-            1 / self.DRIVE_MOTOR_REV_TO_METRES
+        drive_gear_ratio_config = (
+            FeedbackConfigs().with_sensor_to_mechanism_ratio(
+                1 / self.DRIVE_MOTOR_REV_TO_METRES
+            )
         )
 
         # configuration for motor pid and feedforward
-        self.drive_pid = Slot0Configs().with_k_p(1.0868).with_k_i(0).with_k_d(0)
-        self.drive_ff = SimpleMotorFeedforwardMeters(kS=0.15172, kV=2.8305, kA=0.082659)
+        self.drive_pid = Slot0Configs().with_k_p(1.0).with_k_i(0).with_k_d(0)
+        self.drive_ff = SimpleMotorFeedforwardMeters(kS=0.01, kV=0.09, kA=0.0)
 
         drive_config.apply(drive_motor_config)
         drive_config.apply(self.drive_pid, 0.01)
@@ -160,7 +166,9 @@ class SwerveModule:
 
         # smooth wheel velocity vector
         if self.do_smooth:
-            self.state = rate_limit_module(self.state, desired_state, self.accel_limit)
+            self.state = rate_limit_module(
+                self.state, desired_state, self.accel_limit
+            )
         else:
             self.state = desired_state
         current_angle = self.get_rotation()
@@ -178,20 +186,25 @@ class SwerveModule:
         self.steer_request = PositionDutyCycle(target_angle / math.tau)
         self.steer.set_control(self.steer_request)
 
-        # rescale the speed target based on how close we are to being correctly aligned
+        # rescale the speed target based on how close we are to being correctly
+        # aligned
         target_speed = self.state.speed * target_displacement.cos() ** 2
         speed_volt = self.drive_ff.calculate(target_speed)
 
         # original position change/100ms, new m/s -> rot/s
         self.drive.set_control(
-            self.drive_request.with_velocity(target_speed).with_feed_forward(speed_volt)
+            self.drive_request.with_velocity(target_speed).with_feed_forward(
+                speed_volt
+            )
         )
 
     def sync_steer_encoder(self) -> None:
         self.steer.set_position(self.get_angle_absolute())
 
     def get_position(self) -> SwerveModulePosition:
-        return SwerveModulePosition(self.get_distance_traveled(), self.get_rotation())
+        return SwerveModulePosition(
+            self.get_distance_traveled(), self.get_rotation()
+        )
 
     def get(self) -> SwerveModuleState:
         return SwerveModuleState(self.get_speed(), self.get_rotation())
@@ -200,6 +213,7 @@ class SwerveModule:
 class DrivetrainComponent:
     note_tracker: NoteTracker
     gyro: Gyro
+
     # meters between center of left and right wheels
     TRACK_WIDTH = 0.540
     # meters between center of front and back wheels
@@ -244,14 +258,25 @@ class DrivetrainComponent:
         self.modules = (
             # Front Left
             SwerveModule(
+                "Front Left",
                 self.WHEEL_BASE / 2,
                 self.TRACK_WIDTH / 2,
                 TalonId.DRIVE_FL,
                 TalonId.TURN_FL,
                 CancoderId.SWERVE_FL,
             ),
+            # Front Right
+            SwerveModule(
+                "Front Right",
+                self.WHEEL_BASE / 2,
+                -self.TRACK_WIDTH / 2,
+                TalonId.DRIVE_FR,
+                TalonId.TURN_FR,
+                CancoderId.SWERVE_FR,
+            ),
             # Back Left
             SwerveModule(
+                "Back Left",
                 -self.WHEEL_BASE / 2,
                 self.TRACK_WIDTH / 2,
                 TalonId.DRIVE_BL,
@@ -260,19 +285,12 @@ class DrivetrainComponent:
             ),
             # Back Right
             SwerveModule(
+                "Back Right",
                 -self.WHEEL_BASE / 2,
                 -self.TRACK_WIDTH / 2,
                 TalonId.DRIVE_BR,
                 TalonId.TURN_BR,
                 CancoderId.SWERVE_BR,
-            ),
-            # Front Right
-            SwerveModule(
-                self.WHEEL_BASE / 2,
-                -self.TRACK_WIDTH / 2,
-                TalonId.DRIVE_FR,
-                TalonId.TURN_FR,
-                CancoderId.SWERVE_FR,
             ),
         )
 
@@ -286,8 +304,11 @@ class DrivetrainComponent:
         # TODO: Replace with pigeon
         # self.imu.zeroYaw()
         # self.imu.resetDisplacement()
+        # Moved to setup() call
 
-        nt = ntcore.NetworkTableInstance.getDefault().getTable("/components/drivetrain")
+        nt = ntcore.NetworkTableInstance.getDefault().getTable(
+            "/components/drivetrain"
+        )
         module_states_table = nt.getSubTable("module_states")
         self.setpoints_publisher = module_states_table.getStructArrayTopic(
             "setpoints", SwerveModuleState
@@ -298,19 +319,20 @@ class DrivetrainComponent:
 
         wpilib.SmartDashboard.putData("Heading PID", self.heading_controller)
 
+    def setup(self) -> None:
+        print("Resetting gyro heading to 0")
+        # self.gyro.pigeon.set_yaw(0)
+
     def get_velocity(self) -> ChassisSpeeds:
         return self.kinematics.toChassisSpeeds(self.get_module_states())
-
-    @feedback
-    def imu_rotation(self) -> float:
-        # TODO: Replace with Pigeon
-        # return self.imu.getAngle()
-        return 0
 
     def get_module_states(
         self,
     ) -> tuple[
-        SwerveModuleState, SwerveModuleState, SwerveModuleState, SwerveModuleState
+        SwerveModuleState,
+        SwerveModuleState,
+        SwerveModuleState,
+        SwerveModuleState,
     ]:
         return (
             self.modules[0].get(),
@@ -324,11 +346,13 @@ class DrivetrainComponent:
 
     def setup(self) -> None:
         # TODO update with new game info
-        initial_pose = TeamPoses.RED_TEST_POSE if is_red() else TeamPoses.BLUE_TEST_POSE
+        initial_pose = (
+            TeamPoses.RED_TEST_POSE if is_red() else TeamPoses.BLUE_TEST_POSE
+        )
 
         self.estimator = SwerveDrive4PoseEstimator(
             self.kinematics,
-            self.get_heading(),  # self.imu.getRotation2d(),  # TODO: Replace with Pigeon
+            self.get_heading(),
             self.get_module_positions(),
             initial_pose,
             stateStdDevs=(0.05, 0.05, 0.01),
@@ -358,8 +382,13 @@ class DrivetrainComponent:
         self.snapping_to_heading = False
 
     def execute(self) -> None:
-        # rotate desired velocity to compensate for skew caused by discretization
+        # rotate desired velocity to compensate for skew caused by
+        # discretization
         # see https://www.chiefdelphi.com/t/field-relative-swervedrive-drift-even-with-simulated-perfect-modules/413892/
+
+        for m in self.modules:
+            pn = wpilib.SmartDashboard.putNumber
+            pn(f"{m.name} heading", m.get_angle_absolute() * math.tau)
 
         if self.snapping_to_heading:
             self.chassis_speeds.omega = self.heading_controller.calculate(
@@ -375,7 +404,9 @@ class DrivetrainComponent:
             desired_speed_translation = Translation2d(
                 self.chassis_speeds.vx, self.chassis_speeds.vy
             ).rotateBy(
-                Rotation2d(-self.chassis_speeds.omega * 5 * self.control_loop_wait_time)
+                Rotation2d(
+                    -self.chassis_speeds.omega * 5 * self.control_loop_wait_time
+                )
             )
             desired_speeds = ChassisSpeeds(
                 desired_speed_translation.x,
@@ -401,24 +432,18 @@ class DrivetrainComponent:
         self.update_odometry()
 
     def on_enable(self) -> None:
-        """update the odometry so the pose estimator doesn't have an empty buffer
+        """update the odometry so the pose estimator doesn't have an empty
+        buffer
 
-        While we should be building the pose buffer while disabled,
-        this accounts for the edge case of crashing mid match and immediately enabling with an empty buffer
-        """
+        While we should be building the pose buffer while disabled, this
+        accounts for the edge case of crashing mid match and immediately
+        enabling with an empty buffer"""
         self.update_alliance()
         self.update_odometry()
 
-    @magicbot.feedback
-    def get_imu_speed(self) -> float:
-        # TODO: Replace with Pigeon
-        # return math.hypot(self.imu.getVelocityX(), self.imu.getVelocityY())
-        return 0
-
     def get_rotational_velocity(self) -> float:
-        # TODO: Replace with Pigeon
-        # return math.radians(-self.imu.getRate())
-        return 0
+        v = self.gyro.pigeon.get_angular_velocity_z_world().value
+        return math.radians(v)
 
     def lock_swerve(self) -> None:
         self.swerve_lock = True
@@ -427,8 +452,8 @@ class DrivetrainComponent:
         self.swerve_lock = False
 
     def update_alliance(self) -> None:
-        # Check whether our alliance has "changed"
-        # If so, it means we have an update from the FMS and need to re-init the odom
+        # Check whether our alliance has "changed" If so, it means we have an
+        # update from the FMS and need to re-init the odom
         if is_red() != self.on_red_alliance:
             self.on_red_alliance = is_red()
             # TODO update with new game info
@@ -439,11 +464,17 @@ class DrivetrainComponent:
 
     def update_odometry(self) -> None:
         # TODO: Replace with Pigeon
-        # self.estimator.update(self.imu.getRotation2d(), self.get_module_positions())
+        self.estimator.update(
+            self.gyro.get_Rotation2d(), self.get_module_positions()
+        )
         self.field_obj.setPose(self.get_pose())
         if self.send_modules:
-            self.setpoints_publisher.set([module.state for module in self.modules])
-            self.measurements_publisher.set([module.get() for module in self.modules])
+            self.setpoints_publisher.set(
+                [module.state for module in self.modules]
+            )
+            self.measurements_publisher.set(
+                [module.get() for module in self.modules]
+            )
 
     def sync_all(self) -> None:
         for m in self.modules:
@@ -451,19 +482,18 @@ class DrivetrainComponent:
 
     def set_pose(self, pose: Pose2d) -> None:
         # TODO: Replace with Pigeon
-        """
         self.estimator.resetPosition(
-            self.imu.getRotation2d(), self.get_module_positions(), pose
+            self.gyro.get_Rotation2d(), self.get_module_positions(), pose
         )
-        """
         self.field.setRobotPose(pose)
         self.field_obj.setPose(pose)
 
     def reset_yaw(self) -> None:
         """Sets pose to current pose but with a heading of forwards"""
         cur_pose = self.estimator.getEstimatedPosition()
+        default_heading = math.pi if is_red() else 0
         self.set_pose(
-            Pose2d(cur_pose.translation(), Rotation2d(math.pi if is_red() else 0))
+            Pose2d(cur_pose.translation(), Rotation2d(default_heading))
         )
 
     def reset_odometry(self) -> None:
