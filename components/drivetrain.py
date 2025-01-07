@@ -207,6 +207,9 @@ class SwerveModule:
 
 
 class DrivetrainComponent:
+    # Here's where we inject the other components
+    # Note that you can't use the components directly in the __init__ method
+    # You have to use them in the setup() method
     note_tracker: NoteTracker
     gyro: Gyro
 
@@ -240,8 +243,6 @@ class DrivetrainComponent:
     # TODO: Read from positions.py once autonomous is finished
 
     def __init__(self) -> None:
-        # TODO: Replace with Pigeon
-        # self.imu = something
         self.heading_controller = ProfiledPIDControllerRadians(
             3, 0, 0, TrapezoidProfileRadians.Constraints(100, 100)
         )
@@ -297,10 +298,6 @@ class DrivetrainComponent:
             self.modules[3].translation,
         )
         self.sync_all()
-        # TODO: Replace with pigeon
-        # self.imu.zeroYaw()
-        # self.imu.resetDisplacement()
-        # Moved to setup() call
 
         nt = ntcore.NetworkTableInstance.getDefault().getTable(
             "/components/drivetrain"
@@ -317,7 +314,7 @@ class DrivetrainComponent:
 
     def setup(self) -> None:
         print("Resetting gyro heading to 0")
-        # self.gyro.pigeon.set_yaw(0)
+        self.gyro.reset_heading(0)
 
     def get_velocity(self) -> ChassisSpeeds:
         return self.kinematics.toChassisSpeeds(self.get_module_states())
@@ -459,7 +456,6 @@ class DrivetrainComponent:
                 self.set_pose(TeamPoses.BLUE_TEST_POSE)
 
     def update_odometry(self) -> None:
-        # TODO: Replace with Pigeon
         self.estimator.update(
             self.gyro.get_Rotation2d(), self.get_module_positions()
         )
@@ -477,7 +473,6 @@ class DrivetrainComponent:
             m.sync_steer_encoder()
 
     def set_pose(self, pose: Pose2d) -> None:
-        # TODO: Replace with Pigeon
         self.estimator.resetPosition(
             self.gyro.get_Rotation2d(), self.get_module_positions(), pose
         )
