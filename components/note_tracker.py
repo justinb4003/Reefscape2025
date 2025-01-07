@@ -6,13 +6,15 @@ ps = wpilib.SmartDashboard.putString
 
 class NoteTracker:
     def __init__(self):
-        self.camera = PhotonCamera("orangepi01")
         self.note_detected = False
         self.desired_x = None
         self.desired_y = None
         self.desired_heading = None
+        return
+        self.camera = PhotonCamera("orangepi01")
 
     def execute(self):
+        return
         res = self.camera.getLatestResult()
         # curr_heading = gyro.getHeading()
         curr_heading = 0
@@ -33,5 +35,7 @@ class NoteTracker:
                     self.note_detected = True
                     break
 
-    def get_desired_xyz(self) -> tuple[float | None, float | None, float | None]:
+    def get_desired_xyz(
+        self,
+    ) -> tuple[float | None, float | None, float | None]:
         return self.desired_x, self.desired_y, self.desired_heading

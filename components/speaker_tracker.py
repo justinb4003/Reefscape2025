@@ -13,6 +13,7 @@ class SpeakerTracker:
         self.desired_heading = None
 
     def execute(self):
+        return
         res = self.camera.getLatestResult()
         # curr_heading = gyro.getHeading()
         curr_heading = 0
@@ -33,5 +34,7 @@ class SpeakerTracker:
                     self.note_detected = True
                     break
 
-    def get_desired_xyz(self) -> tuple[float | None, float | None, float | None]:
+    def get_desired_xyz(
+        self,
+    ) -> tuple[float | None, float | None, float | None]:
         return self.desired_x, self.desired_y, self.desired_heading

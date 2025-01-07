@@ -19,10 +19,10 @@ class MyRobot(magicbot.MagicRobot):
     # Controllers
 
     # Components
+    gyro: Gyro
     chassis: DrivetrainComponent
     vision: VisualLocalizer
     note_tracker: NoteTracker
-    gyro: Gyro
     speaker_tracker: SpeakerTracker
 
     max_speed = magicbot.tunable(5)  # m/s
@@ -60,7 +60,9 @@ class MyRobot(magicbot.MagicRobot):
             x, y, z = self.note_tracker.get_desired_xyz()
             if x is not None and y is not None and z is not None:
                 self.chassis.drive_local(x, y, z)
-        elif self.gamepad.getBButton() and self.speaker_tracker.speaker_detected:
+        elif (
+            self.gamepad.getBButton() and self.speaker_tracker.speaker_detected
+        ):
             # Speaker Tracking
             x, y, z = self.speaker_tracker.get_desired_xyz()
             if x is not None and y is not None and z is not None:
@@ -73,8 +75,12 @@ class MyRobot(magicbot.MagicRobot):
             if self.gamepad.getRightBumper():
                 max_speed = self.lower_max_speed
                 max_spin_rate = self.lower_max_spin_rate
-            drive_x = -rescale_js(self.gamepad.getLeftY(), 0.05, 2.5) * max_speed
-            drive_y = -rescale_js(self.gamepad.getLeftX(), 0.05, 2.5) * max_speed
+            drive_x = (
+                -rescale_js(self.gamepad.getLeftY(), 0.05, 2.5) * max_speed
+            )
+            drive_y = (
+                -rescale_js(self.gamepad.getLeftX(), 0.05, 2.5) * max_speed
+            )
             drive_z = (
                 -rescale_js(self.gamepad.getRightX(), 0.1, exponential=2)
                 * max_spin_rate

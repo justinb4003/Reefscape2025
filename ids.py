@@ -35,7 +35,7 @@ class CancoderId(enum.IntEnum):
 class CanId(enum.IntEnum):
     """CAN IDs for miscellaneous devices."""
 
-    PIGEON = 63
+    PIGEON = 35
 
 
 @enum.unique
