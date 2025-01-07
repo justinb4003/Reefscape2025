@@ -143,15 +143,11 @@ class SwerveModule:
 
     def get_angle_absolute(self) -> float:
         """Gets steer angle (rot) from absolute encoder"""
-        return self.encoder.get_absolute_position().value
-
-    def get_angle_integrated(self) -> float:
-        """Gets steer angle from motor's integrated relative encoder"""
-        return self.steer.get_position().value * math.tau
+        return self.encoder.get_absolute_position().value * math.tau
 
     def get_rotation(self) -> Rotation2d:
         """Get the steer angle as a Rotation2d"""
-        return Rotation2d(self.get_angle_integrated())
+        return Rotation2d(self.get_angle_absolute())
 
     def get_speed(self) -> float:
         # velocity is in rot/s, return in m/s
@@ -236,7 +232,7 @@ class DrivetrainComponent:
     field: wpilib.Field2d
     logger: Logger
 
-    send_modules = magicbot.tunable(False)
+    send_modules = magicbot.tunable(True)
     do_fudge = magicbot.tunable(True)
     do_smooth = magicbot.tunable(True)
     swerve_lock = magicbot.tunable(False)
