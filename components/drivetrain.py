@@ -11,13 +11,19 @@ from phoenix6.configs import (
     MotorOutputConfigs,
     Slot0Configs,
 )
-from phoenix6.controls import PositionDutyCycle, VelocityVoltage, VoltageOut
+from phoenix6.controls import (
+    PositionDutyCycle,
+    VelocityVoltage,
+    VoltageOut,
+    DutyCycleOut,
+)
 from phoenix6.hardware import CANcoder, TalonFX
 from phoenix6.signals import InvertedValue, NeutralModeValue
 from wpimath.controller import (
     ProfiledPIDControllerRadians,
     SimpleMotorFeedforwardMeters,
 )
+from wpimath.controller import PIDController
 from wpimath.estimator import SwerveDrive4PoseEstimator
 from wpimath.geometry import Pose2d, Rotation2d, Translation2d
 from wpimath.kinematics import (
@@ -37,10 +43,13 @@ from utilities.position import TeamPoses
 from .gyro import Gyro
 from .note_tracker import NoteTracker
 
+pn = wpilib.SmartDashboard.putNumber
+
 
 class SwerveModule:
-    DRIVE_GEAR_RATIO = (14.0 / 50.0) * (25.0 / 19.0) * (15.0 / 45.0)
-    STEER_GEAR_RATIO = (14 / 50) * (10 / 60)
+    # DRIVE_GEAR_RATIO = (14.0 / 50.0) * (25.0 / 19.0) * (15.0 / 45.0)
+    DRIVE_GEAR_RATIO = 1
+    STEER_GEAR_RATIO = 10.28
     WHEEL_CIRCUMFERENCE = 4 * 2.54 / 100 * math.pi
 
     DRIVE_MOTOR_REV_TO_METRES = WHEEL_CIRCUMFERENCE * DRIVE_GEAR_RATIO
@@ -99,7 +108,7 @@ class SwerveModule:
         )
 
         # configuration for motor pid
-        steer_pid = Slot0Configs().with_k_p(2.5).with_k_i(0.0).with_k_d(0.0)
+        steer_pid = Slot0Configs().with_k_p(0.175).with_k_i(0.0).with_k_d(0.0)
         steer_closed_loop_config = ClosedLoopGeneralConfigs()
         steer_closed_loop_config.continuous_wrap = True
 
@@ -126,8 +135,8 @@ class SwerveModule:
         )
 
         # configuration for motor pid and feedforward
-        self.drive_pid = Slot0Configs().with_k_p(1.0).with_k_i(0).with_k_d(0)
-        self.drive_ff = SimpleMotorFeedforwardMeters(kS=0.01, kV=0.09, kA=0.0)
+        self.drive_pid = Slot0Configs().with_k_p(0.5).with_k_i(0).with_k_d(0)
+        self.drive_ff = SimpleMotorFeedforwardMeters(kS=0.00, kV=0.00, kA=0.0)
 
         drive_config.apply(drive_motor_config)
         drive_config.apply(self.drive_pid, 0.01)
@@ -135,15 +144,17 @@ class SwerveModule:
 
         self.central_angle = Rotation2d(x, y)
         self.module_locked = False
-
-        self.sync_steer_encoder()
-
         self.drive_request = VelocityVoltage(0)
+        self.steer_request = DutyCycleOut(0)
         self.stop_request = VoltageOut(0)
+
+        self.steer_pid_controller = PIDController(0.02, 0, 0)
 
     def get_angle_absolute(self) -> float:
         """Gets steer angle (rot) from absolute encoder"""
-        return self.encoder.get_absolute_position().value * math.tau
+        v = self.encoder.get_absolute_position().value
+        pn(f"{self.name} encoder", v)
+        return v
 
     def get_rotation(self) -> Rotation2d:
         """Get the steer angle as a Rotation2d"""
@@ -179,7 +190,14 @@ class SwerveModule:
 
         target_displacement = self.state.angle - current_angle
         target_angle = self.state.angle.radians()
-        self.steer_request = PositionDutyCycle(target_angle / math.tau)
+        print("-------------------------")
+        print(current_angle.radians())
+        print(target_angle)
+        print("-------------------------")
+        steer_output = self.steer_pid_controller.calculate(
+            current_angle.radians(), target_angle
+        )
+        self.steer_request.output = steer_output
         self.steer.set_control(self.steer_request)
 
         # rescale the speed target based on how close we are to being correctly
@@ -193,9 +211,6 @@ class SwerveModule:
                 speed_volt
             )
         )
-
-    def sync_steer_encoder(self) -> None:
-        self.steer.set_position(self.get_angle_absolute())
 
     def get_position(self) -> SwerveModulePosition:
         return SwerveModulePosition(
@@ -236,8 +251,8 @@ class DrivetrainComponent:
     logger: Logger
 
     send_modules = magicbot.tunable(True)
-    do_fudge = magicbot.tunable(True)
-    do_smooth = magicbot.tunable(True)
+    do_fudge = magicbot.tunable(False)
+    do_smooth = magicbot.tunable(False)
     swerve_lock = magicbot.tunable(False)
 
     # TODO: Read from positions.py once autonomous is finished
@@ -297,7 +312,6 @@ class DrivetrainComponent:
             self.modules[2].translation,
             self.modules[3].translation,
         )
-        self.sync_all()
 
         nt = ntcore.NetworkTableInstance.getDefault().getTable(
             "/components/drivetrain"
@@ -467,10 +481,6 @@ class DrivetrainComponent:
             self.measurements_publisher.set(
                 [module.get() for module in self.modules]
             )
-
-    def sync_all(self) -> None:
-        for m in self.modules:
-            m.sync_steer_encoder()
 
     def set_pose(self, pose: Pose2d) -> None:
         self.estimator.resetPosition(
