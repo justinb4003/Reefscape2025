@@ -96,33 +96,26 @@ class MyRobot(magicbot.MagicRobot):
                 self.chassis.drive_field(drive_x, drive_y, drive_z)
             # Give rotational access to the driver
             if drive_z != 0:
-                self.chassis.stop_snapping()
+                # self.chassis.stop_snapping()
+                pass
 
     def teleopPeriodic(self) -> None:
         self.handle_drivetrain()
+
+    def disabledPeriodic(self) -> None:
+        for m in self.chassis.modules:
+            m.get_angle_absolute()
+            m.get_angle_integrated()
 
     def testInit(self) -> None:
         pass
 
     def testPeriodic(self) -> None:
-        dpad = self.gamepad.getPOV()
-        if dpad != -1:
-            if is_red():
-                self.chassis.snap_to_heading(-math.radians(dpad) + math.pi)
-            else:
-                self.chassis.snap_to_heading(-math.radians(dpad))
-        else:
-            self.chassis.stop_snapping()
-            self.chassis.drive_local(0, 0, 0)
-
         self.chassis.execute()
-
         self.chassis.update_odometry()
-
         self.vision.execute()
 
     def disabledPeriodic(self) -> None:
         self.chassis.update_alliance()
         self.chassis.update_odometry()
-
         self.vision.execute()

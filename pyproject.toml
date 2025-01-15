@@ -77,8 +77,8 @@ requires-python = ">=3.10,<3.13"
 dependencies = [
     "numpy~=2.1",
     "phoenix6~=25.1.0",
-    "robotpy==2025.1.1.1",
-    "robotpy-apriltag~=2025.1.1.0",
+    "robotpy==2025.2.1.0",
+    "robotpy-apriltag~=2025.2.1.0",
     "robotpy-wpilib-utilities==2025.0.0",
     "photonlibpy==2025.0.0b8",
 ]
@@ -87,10 +87,14 @@ dependencies = [
 requires = [
     "numpy~=2.1",
     "phoenix6~=25.1.0",
-    "robotpy==2025.1.1.1",
-    "robotpy-apriltag~=2025.1.1.0",
+    "robotpy==2025.2.1.0",
+    "robotpy-apriltag~=2025.2.1.0",
     "robotpy-wpilib-utilities==2025.0.0",
     "photonlibpy==2025.0.0b8",
 ]
-robotpy_version = "2025.1.1.1"
+robotpy_version = "2025.2.1.0"
 robotpy_extras = ["apriltag"]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
