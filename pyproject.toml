@@ -17,10 +17,14 @@ warn_unused_ignores = true
 warn_unreachable = true
 strict_equality = true
 
-[[tool.mypy.overrides]]
-module = "photonlibpy.*"
-# https://github.com/PhotonVision/photonvision/issues/1210
-ignore_missing_imports = true
+[tool.pyright]
+exclude = [
+    "ctre_sim",
+    "logs",
+    # Default excludes
+    "**/__pycache__",
+    "**/.*",
+]
 
 [tool.pytest.ini_options]
 addopts = "--strict-markers -v --maxfail=2"
@@ -30,30 +34,35 @@ xfail_strict = true
 
 [tool.ruff]
 target-version = "py311"
-line-length = 80
+preview = true
 
 [tool.ruff.lint]
-preview = true
 select = [
     # pycodestyle
     "E",
-    # "E501",
     # pyflakes
-    # "F",
+    "F",
     # flake8-bugbear
-    # "B",
+    "B",
+    # isort
+    "I",
     # pyupgrade
-    # "UP",
+    "UP",
     # flake8-comprehensions
-    # "C4",
+    "C4",
     # flake8-logging-format
-    # "G",
+    "G",
     # flake8-simplify
-    # "SIM",
+    "SIM",
     # flake8-print
-    # "T20",  # we'll stop making them a warning for now
+    "T20",
     # perflint
-    # "PERF",
+    "PERF",
+]
+ignore = [
+    "E501", # long lines
+    "B905", # zip() without strict=
+    "I001", # Unsorted imports
 ]
 
 [tool.uv]
@@ -68,29 +77,28 @@ prerelease = "allow"
 [project]
 name = "pyreefscape"
 version = "0.0.0"
-description = "The Drop Bears' FRC 2025 robot code"
-authors = [{ name = "The Drop Bears", email = "enquiries@thedropbears.org.au" }]
+description = "The TriSoncis 2025 Robot Code"
+authors = [{ name = "The TriSonids", email = "contact@allendalerobotics.com" }]
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.10,<3.13"
+requires-python = ">=3.12,<3.14"
 
 dependencies = [
     "numpy~=2.1",
     "phoenix6~=25.1.0",
-    "robotpy==2025.1.1.1",
-    "robotpy-apriltag~=2025.1.1.0",
+    "robotpy[apriltag]==2025.2.1.0",
     "robotpy-wpilib-utilities==2025.0.0",
-    "photonlibpy==2025.0.0b8",
+    "photonlibpy==2025.1.1rc1",
+    "sleipnirgroup-choreolib>=2025.0.2",
 ]
 
 [tool.robotpy]
 requires = [
     "numpy~=2.1",
     "phoenix6~=25.1.0",
-    "robotpy==2025.1.1.1",
-    "robotpy-apriltag~=2025.1.1.0",
     "robotpy-wpilib-utilities==2025.0.0",
-    "photonlibpy==2025.0.0b8",
+    "photonlibpy==2025.1.1rc1",
+    "sleipnirgroup-choreolib>=2025.0.2",
 ]
-robotpy_version = "2025.1.1.1"
+robotpy_version = "2025.2.1.0"
 robotpy_extras = ["apriltag"]
